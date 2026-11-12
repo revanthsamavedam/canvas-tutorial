@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Canvas demo shell</title>
+  <style>body { font-family: system-ui, sans-serif; margin: 24px; color: #333; }</style>
+</head>
+<body>
+  <h1>No page loaded</h1>
+  <p>This is the demo shell the viewer shows when no version is loaded.
+  It has no bridge script, so <code>window.canvas</code> is undefined here —
+  the same fallback a page sees when it is opened outside the viewer.</p>
+  <p>Pick a page above: <b>Load sample HTML page</b> or <b>Load React bundle</b>.</p>
+  <script>
+    document.body.insertAdjacentHTML('beforeend',
+      '<p>window.canvas is ' + (typeof window.canvas) + '.</p>')
+  </script>
+</body>
+</html>

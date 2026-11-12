@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>01 — Bridge demo (chrome)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+    iframe { width: 100%; height: 320px; border: 1px solid #888; }
+    #log { background: #111; color: #ddd; padding: 12px; white-space: pre-wrap; font: 13px monospace; min-height: 80px; }
+    h1 { font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h1>01 — Bridge demo: the chrome (outer shell)</h1>
+  <p>This page is the viewer. The iframe below is the inner page
+  (<code>demo-page.html</code>). The chrome answers bridge calls with
+  an in-page stub — no server, no tokens on the wire.</p>
+  <iframe id="frame" src="demo-page.html" sandbox="allow-scripts" title="Inner page"></iframe>
+  <h2>Chrome log</h2>
+  <div id="log">waiting for the iframe…</div>
+
+  <script src="host.js"></script>
+  <script>
+    // The stub "riskhub" API. In the real viewer this is a registry
+    // entry {app_name, base_url, token_url} and the chrome POSTs to
+    // the token URL, then calls the base URL with the token. Here the
+    // stub stands in for both steps so the demo runs with no server:
+    // the token is fetched (in-page) and the call is made (in-page),
+    // and the page still only ever sees {status, data}.
+    var REGISTRY = [{ name: 'riskhub', api_url: 'stub://riskhub', token_url: 'stub://riskhub/token' }]
+    var DOCS = [
+      { id: 'doc_1', title: 'Audit Evidence Pack — Q3', status: 'ready' },
+      { id: 'doc_2', title: 'Audit Evidence Pack — Q4', status: 'draft' },
+    ]
+    var store = {} // document-scoped state, in memory for the demo
+
+    async function fetchToken(entry) {
+      // Real viewer: POST entry.token_url, read access_token.
+      // Stub: the token is just a string the chrome holds.
+      return 'stub-token'
+    }
+    async function callRegisteredApi(api, path, opts) {
+      var entry = REGISTRY.find(function (a) { return a.name === api })
+      if (!entry) throw new Error('api_not_registered')
+      var token = await fetchToken(entry)
+      if (!token) throw new Error('token fetch failed')
+      var method = (opts && opts.method) || 'GET'
+      if (method === 'GET' && path === '/v1/docs') return { status: 200, data: { documents: DOCS } }
+      if (method === 'GET' && path.indexOf('/v1/docs/') === 0) {
+        var doc = DOCS.find(function (d) { return d.id === path.slice('/v1/docs/'.length) })
+        if (!doc) return { status: 404, data: { error: 'not_found' } }
+        return { status: 200, data: doc }
+      }
+      return { status: 404, data: { error: 'not_found' } }
+    }
+
+    var logEl = document.getElementById('log')
+    function log(ev) {
+      logEl.textContent += '\n' + ev.label + ' — ' + ev.status + (ev.ms !== undefined ? ' (' + ev.ms + 'ms)' : '')
+    }
+
+    var frame = document.getElementById('frame')
+    var host = createBridgeHost({
+      getFrame: function () { return frame },
+      apis: REGISTRY,
+      callRegisteredApi: callRegisteredApi,
+      canvasApiGet: function (path) {
+        // Allowlisted Canvas-API reads (the real chrome allowlists
+        // paths like /v1/documents/.../versions). The demo allows one.
+        if (path === '/v1/documents/demo/versions') return Promise.resolve([{ number: 1 }])
+        return Promise.reject(new Error('api_path_not_allowed'))
+      },
+      state: {
+        get: function (key) { return Promise.resolve(store[key] === undefined ? null : store[key]) },
+        all: function () { return Promise.resolve(Object.assign({}, store)) },
+        set: function (key, value) { store[key] = value; return Promise.resolve(value) },
+        delete: function (key) { delete store[key]; return Promise.resolve(null) },
+      },
+      uploadToApi: function (api, path, file) {
+        return Promise.resolve({ status: 200, data: { ok: true, filename: file.filename, size: file.bytes.byteLength } })
+      },
+      downloadFromApi: function (api, path) {
+        var text = JSON.stringify({ documents: DOCS }, null, 2)
+        return Promise.resolve({ bytes: new TextEncoder().encode(text).buffer, contentType: 'application/json', filename: 'docs.json' })
+      },
+      onStateChanged: function (key, value) { log({ label: 'state changed: ' + key + ' = ' + JSON.stringify(value), status: 'ok' }) },
+      onLog: log,
+    })
+
+    window.addEventListener('message', function (e) { host.handleMessage(e) })
+    frame.addEventListener('load', function () { host.startSession('demo-doc') })
+  </script>
+</body>
+</html>

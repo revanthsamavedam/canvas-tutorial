@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>01 — Bridge demo (inner page)</title>
+  <style>body { font-family: system-ui, sans-serif; margin: 16px; }</style>
+</head>
+<body>
+  <h1>Inner page</h1>
+  <p id="status">Bridge: waiting…</p>
+  <p id="docs">Docs: —</p>
+  <p id="state">State: —</p>
+  <script src="bridge.js"></script>
+  <script>
+    // The page only knows window.canvas. It never fetches, never
+    // sees a token, never knows the API's URL.
+    var statusEl = document.getElementById('status')
+    var docsEl = document.getElementById('docs')
+    var stateEl = document.getElementById('state')
+
+    window.canvas.api.fetch('riskhub', '/v1/docs')
+      .then(function (res) {
+        statusEl.textContent = 'Bridge: ready — live data available.'
+        docsEl.textContent = 'Live docs: ' + res.data.documents.length + ' — ' +
+          res.data.documents.map(function (d) { return d.title }).join(', ')
+        return window.canvas.state.set('last-viewed', 'demo-page')
+      })
+      .then(function () { return window.canvas.state.get('last-viewed') })
+      .then(function (v) { stateEl.textContent = 'State: last-viewed = ' + v })
+      .catch(function (e) {
+        statusEl.textContent = 'Bridge: not available — ' + e.message
+      })
+  </script>
+</body>
+</html>

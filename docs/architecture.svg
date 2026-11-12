@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="720" viewBox="0 0 1260 720" font-family="Segoe Print, Comic Sans MS, cursive, sans-serif">
+<defs><marker id="arr" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1e1e1e"/></marker></defs>
+<rect x="0" y="0" width="1260" height="720" fill="#ffffff"/>
+<rect x="20" y="70" width="900" height="520" rx="6" fill="#f1f3f5" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="40" y="120" width="320" height="440" rx="6" fill="#fff4e6" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="60" y="170" width="280" height="55" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="200" y="193.5" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="200" dy="0">CSP — connect-src 'none'</tspan><tspan x="200" dy="20">(no network)</tspan></text>
+<rect x="60" y="245" width="280" height="55" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="200" y="268.5" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="200" dy="0">Lockdown script</tspan><tspan x="200" dy="20">fetch / XHR throw</tspan></text>
+<rect x="60" y="320" width="280" height="55" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="200" y="343.5" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="200" dy="0">Bridge script — window.canvas</tspan><tspan x="200" dy="20">(injected at view time)</tspan></text>
+<rect x="60" y="395" width="280" height="130" rx="6" fill="#d3f9d8" stroke="#1e1e1e" stroke-width="2"/>
+<text x="200" y="436" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="200" dy="0">Page — plain HTML sample /</tspan><tspan x="200" dy="20">React bundle</tspan><tspan x="200" dy="20">renders · checks ready · calls api.fetch</tspan><tspan x="200" dy="20">falls back to baked-in data</tspan></text>
+<rect x="420" y="300" width="230" height="100" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="535" y="326" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="535" dy="0">Bridge host</tspan><tspan x="535" dy="20">answers canvas-request</tspan><tspan x="535" dy="20">checks session, dispatches</tspan><tspan x="535" dy="20">api / state / files</tspan></text>
+<rect x="420" y="440" width="230" height="80" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="535" y="476" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="535" dy="0">Registry lookup</tspan><tspan x="535" dy="20">riskhub → token URL + API URL</tspan></text>
+<rect x="700" y="300" width="200" height="100" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="800" y="336" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="800" dy="0">Token fetch</tspan><tspan x="800" dy="20">POST token URL</tspan><tspan x="800" dy="20">holds the token</tspan></text>
+<rect x="700" y="440" width="200" height="80" rx="6" fill="#ffffff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="800" y="476" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="800" dy="0">API call</tspan><tspan x="800" dy="20">GET / POST + Bearer token</tspan></text>
+<rect x="1020" y="300" width="200" height="170" rx="6" fill="#e7f5ff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="1120" y="351" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="1120" dy="0">REGISTERED API</tspan><tspan x="1120" dy="20">riskhub (stub)</tspan><tspan x="1120" dy="20">token URL + API URL</tspan><tspan x="1120" dy="20">reached only by</tspan><tspan x="1120" dy="20">the outer shell</tspan></text>
+<rect x="20" y="620" width="1180" height="70" rx="6" fill="#fff3bf" stroke="#1e1e1e" stroke-width="2"/>
+<text x="610" y="651" font-size="16" text-anchor="middle" fill="#1e1e1e"><tspan x="610" dy="0">The page never holds a token and never fetches directly.</tspan><tspan x="610" dy="20">CSP connect-src 'none' + the lockdown script block it at the browser level. Only the outer shell talks to the network.</tspan></text>
+<path d="M200,395 L200,375" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M340,348 L420,350" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+<path d="M535,400 L535,440" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M650,480 L675,480 L675,350 L700,350" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M800,400 L800,440" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M900,480 L1020,385" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+<text x="20" y="44" font-size="24" fill="#1e1e1e">Canvas architecture — the bridge, the shells, and the data flow</text>
+<text x="40" y="104" font-size="16" fill="#1e1e1e">OUTER SHELL — viewer chrome</text>
+<text x="60" y="154" font-size="16" fill="#1e1e1e">INNER SHELL — sandboxed iframe</text>
+<text x="210" y="382" font-size="14" fill="#1e1e1e">1 · api.fetch</text>
+<text x="295" y="332" font-size="14" fill="#1e1e1e">2 · canvas-request / 6 · response</text>
+<text x="545" y="426" font-size="14" fill="#1e1e1e">3 · look up</text>
+<text x="682" y="419" font-size="14" fill="#1e1e1e">4 · token URL</text>
+<text x="810" y="426" font-size="14" fill="#1e1e1e">token</text>
+<text x="930" y="506" font-size="14" fill="#1e1e1e">5 · API request + {status, data}</text>
+</svg>

@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0a1626;
+  color: #e8eef7;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+nav a {
+  color: #7aa8e0;
+  text-decoration: none;
+}
+
+main {
+  padding: 24px;
+  max-width: 720px;
+}
+
+h1 {
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}

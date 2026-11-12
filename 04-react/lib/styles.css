@@ -1,0 +1,47 @@
+/* Styles shipped by the component library. Vite bundles this CSS and
+   vite-plugin-singlefile inlines it into the one HTML file — no external
+   stylesheet, no font import. (A library that loads Google Fonts would
+   break the single-file rule; use system fonts or bundle the font.) */
+
+.lib-button {
+  background: #7aa8e0;
+  color: #0a1626;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lib-card {
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  background: #0e1e33;
+}
+
+.lib-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.lib-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 140px;
+}
+
+.lib-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.lib-stat-label {
+  font-size: 12px;
+  color: #9db4d0;
+}

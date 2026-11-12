@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>02 — Canvas viewer (outer shell)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #0a1626; color: #e8eef7; }
+    header { padding: 12px 20px; border-bottom: 1px solid #1e3a5f; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    header h1 { font-size: 18px; margin: 0 12px 0 0; }
+    button { background: #7aa8e0; color: #0a1626; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .hint { color: #9db4d0; font-size: 13px; }
+    main { display: grid; grid-template-columns: 1fr 320px; gap: 0; }
+    iframe { width: 100%; height: calc(100vh - 57px); border: 0; background: #fff; }
+    aside { border-left: 1px solid #1e3a5f; padding: 16px; font-size: 14px; overflow-y: auto; height: calc(100vh - 57px); box-sizing: border-box; }
+    aside h2 { font-size: 14px; margin: 20px 0 6px; color: #7aa8e0; }
+    aside h2:first-child { margin-top: 0; }
+    pre { background: #0e1e33; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-size: 12px; max-height: 220px; overflow-y: auto; }
+    #log { background: #111; color: #ddd; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Canvas viewer</h1>
+    <button id="load-sample">Load sample HTML page</button>
+    <button id="load-react">Load React bundle</button>
+    <label class="hint">or open any HTML file:
+      <input type="file" id="file-input" accept=".html">
+    </label>
+    <span class="hint" id="status">loading bridge…</span>
+  </header>
+  <main>
+    <iframe id="frame" title="Canvas inner" sandbox="allow-scripts"></iframe>
+    <aside>
+      <h2>Registered APIs</h2>
+      <pre id="apis">riskhub — stub://riskhub (token: stub://riskhub/token)</pre>
+      <h2>Document state (shared KV)</h2>
+      <pre id="state">{}</pre>
+      <h2>Chrome log</h2>
+      <pre id="log">—</pre>
+    </aside>
+  </main>
+
+  <script src="../01-bridge/host.js"></script>
+  <script src="shell.js"></script>
+  <script>
+    // The viewer (outer shell). It owns the network, the tokens, the
+    // registry, and the state store. The page inside the iframe owns
+    // pixels and JavaScript and can only ask, through window.canvas.
+    var frame = document.getElementById('frame')
+    var statusEl = document.getElementById('status')
+    var stateEl = document.getElementById('state')
+    var logEl = document.getElementById('log')
+    var bridgeSource = null
+    var currentDoc = null
+
+    // --- The stub "riskhub" API (same stub as 01-bridge/demo.html).
+    // In the real viewer this is a registry entry {app_name, base_url,
+    // token_url} and the chrome POSTs to the token URL, then calls the
+    // base URL with the token. Here both steps are in-page functions,
+    // so the viewer runs with no server. The page sees the same
+    // {status, data} shape either way.
+    var REGISTRY = [{ name: 'riskhub', api_url: 'stub://riskhub', token_url: 'stub://riskhub/token' }]
+    var DOCS = [
+      { id: 'doc_1', title: 'Audit Evidence Pack — Q3', status: 'ready' },
+      { id: 'doc_2', title: 'Audit Evidence Pack — Q4', status: 'draft' },
+    ]
+    var store = {}
+
+    async function fetchToken(entry) {
+      return 'stub-token' // real viewer: POST entry.token_url, read access_token
+    }
+    async function callRegisteredApi(api, path, opts) {
+      var entry = REGISTRY.find(function (a) { return a.name === api })
+      if (!entry) throw new Error('api_not_registered')
+      var token = await fetchToken(entry)
+      if (!token) throw new Error('token fetch failed')
+      var method = (opts && opts.method) || 'GET'
+      if (method === 'GET' && path === '/v1/docs') return { status: 200, data: { documents: DOCS } }
+      if (method === 'GET' && path.indexOf('/v1/docs/') === 0) {
+        var doc = DOCS.find(function (d) { return d.id === path.slice('/v1/docs/'.length) })
+        if (!doc) return { status: 404, data: { error: 'not_found' } }
+        return { status: 200, data: doc }
+      }
+      if (method === 'POST' && path === '/v1/notes') {
+        return { status: 201, data: { ok: true, note: (opts && opts.body) || null } }
+      }
+      return { status: 404, data: { error: 'not_found' } }
+    }
+
+    function renderState() {
+      stateEl.textContent = JSON.stringify(store, null, 2)
+    }
+    function log(ev) {
+      logEl.textContent = (logEl.textContent === '—' ? '' : logEl.textContent + '\n') +
+        ev.label + ' — ' + ev.status + (ev.ms !== undefined ? ' (' + ev.ms + 'ms)' : '')
+    }
+
+    var host = createBridgeHost({
+      getFrame: function () { return frame },
+      apis: REGISTRY,
+      callRegisteredApi: callRegisteredApi,
+      canvasApiGet: function (path) {
+        if (path === '/v1/documents/demo/versions') return Promise.resolve([{ number: 1 }])
+        return Promise.reject(new Error('api_path_not_allowed'))
+      },
+      state: {
+        get: function (key) { return Promise.resolve(store[key] === undefined ? null : store[key]) },
+        all: function () { return Promise.resolve(Object.assign({}, store)) },
+        set: function (key, value) { store[key] = value; renderState(); return Promise.resolve(value) },
+        delete: function (key) { delete store[key]; renderState(); return Promise.resolve(null) },
+      },
+      uploadToApi: function (api, path, file) {
+        return Promise.resolve({ status: 200, data: { ok: true, filename: file.filename, size: file.bytes.byteLength } })
+      },
+      downloadFromApi: function (api, path) {
+        var text = JSON.stringify({ documents: DOCS }, null, 2)
+        return Promise.resolve({ bytes: new TextEncoder().encode(text).buffer, contentType: 'application/json', filename: 'docs.json' })
+      },
+      onStateChanged: function (key, value) { renderState() },
+      onLog: log,
+    })
+
+    window.addEventListener('message', function (e) { host.handleMessage(e) })
+
+    // Fresh session per view: the old nonce stops working when the
+    // iframe loads a new page. The host posts canvas-init on load.
+    //
+    // The src/srcDoc handoff is a real race: removing `src` starts an
+    // about:blank navigation, and setting `srcdoc` in the same task
+    // sometimes loses to it — the frame stays on about:blank and the
+    // page never loads (seen 1 run in 3). So the two steps are split
+    // across the blank page's load event: remove src, wait for the
+    // blank document to load, then set srcdoc. Once srcdoc is set the
+    // iframe has no src at all, so later loads set srcdoc directly.
+    var pendingSrcdoc = null
+    frame.addEventListener('load', function () {
+      if (pendingSrcdoc !== null) {
+        var s = pendingSrcdoc
+        pendingSrcdoc = null
+        frame.srcdoc = s
+        return
+      }
+      if (currentDoc) host.startSession(currentDoc)
+    })
+
+    // Load a page: wrap it in the inner shell and set it as the
+    // iframe's srcDoc. src and srcDoc are mutually exclusive — when a
+    // page is loaded the iframe has NO src attribute at all, so the
+    // only content is the srcDoc document. (React updating srcDoc on
+    // an iframe that already loaded via src does not reliably
+    // navigate it; the real viewer hit exactly this bug.) The src
+    // removal and the srcdoc set are split across the blank page's
+    // load event — see the load handler above — because doing both
+    // in one task races and sometimes leaves the frame on about:blank.
+    function loadPage(html, docId) {
+      if (!bridgeSource) { statusEl.textContent = 'bridge not loaded — run python3 -m http.server from the repo root'; return }
+      currentDoc = docId
+      var shelled = CanvasShell.withCanvasShell(html, bridgeSource)
+      if (frame.hasAttribute('src')) {
+        pendingSrcdoc = shelled
+        frame.removeAttribute('src')
+      } else {
+        frame.srcdoc = shelled
+      }
+      statusEl.textContent = 'showing: ' + docId
+    }
+
+    async function loadFromUrl(url, docId) {
+      try {
+        var res = await fetch(url)
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        loadPage(await res.text(), docId)
+      } catch (e) {
+        statusEl.textContent = 'could not load ' + url + ' — ' + e.message + ' (run python3 -m http.server from the repo root)'
+      }
+    }
+
+    document.getElementById('load-sample').addEventListener('click', function () {
+      loadFromUrl('../03-sample-html/index.html', 'sample-html')
+    })
+    document.getElementById('load-react').addEventListener('click', function () {
+      loadFromUrl('../04-react/dist/index.html', 'react-bundle')
+    })
+    document.getElementById('file-input').addEventListener('change', function (e) {
+      var file = e.target.files[0]
+      if (!file) return
+      var reader = new FileReader()
+      reader.onload = function () { loadPage(String(reader.result), file.name) }
+      reader.readAsText(file)
+    })
+
+    // The bridge source is fetched as text so the shell can inject it.
+    // (This is the one fetch the viewer itself makes; the page inside
+    // the iframe never fetches anything.)
+    fetch('../01-bridge/bridge.js')
+      .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.text() })
+      .then(function (text) {
+        bridgeSource = text
+        statusEl.textContent = 'bridge loaded — pick a page'
+        // No page loaded yet: show the demo shell as the iframe's src.
+        frame.src = 'demo-shell.html'
+      })
+      .catch(function (e) {
+        statusEl.textContent = 'could not load bridge.js — ' + e.message + ' (run python3 -m http.server from the repo root)'
+      })
+    renderState()
+  </script>
+</body>
+</html>

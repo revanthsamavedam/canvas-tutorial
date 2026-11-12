@@ -1,0 +1,1 @@
+{"description":"Canvas tutorial — verification tooling only (headless Chromium end-to-end). The tutorial parts themselves have no shared dependencies.","devDependencies":{"playwright-core":"^1.0.0"},"name":"canvas-tutorial","private":true,"scripts":{"diagram":"node scripts/gen-diagram.mjs","verify":"node scripts/verify.mjs"},"type":"module","version":"0.1.0"}

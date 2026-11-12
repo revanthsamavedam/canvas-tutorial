@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas sample page — plain HTML</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #0a1626; color: #e8eef7; }
+    main { padding: 24px; max-width: 720px; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    section { border: 1px solid #1e3a5f; border-radius: 8px; padding: 16px; margin: 16px 0; background: #0e1e33; }
+    section h2 { margin: 0 0 8px; font-size: 18px; }
+    button { background: #7aa8e0; color: #0a1626; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .muted { color: #9db4d0; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Canvas sample page</h1>
+    <p class="muted">Plain HTML + JavaScript. No framework, no build step.</p>
+    <p id="bridge-status">Bridge: checking…</p>
+
+    <section>
+      <h2>Live docs via the bridge</h2>
+      <p>Calls the registered riskhub API through window.canvas — never a direct fetch.</p>
+      <button id="load-docs" disabled>Load live docs</button>
+      <p id="docs">Not loaded yet.</p>
+      <p id="docs-error"></p>
+    </section>
+
+    <section>
+      <h2>Shared state</h2>
+      <p>A counter kept in the document's shared state. It survives page reloads in the real viewer (the state lives in the chrome, not the page).</p>
+      <p>Count: <b id="count">0</b></p>
+      <button id="count-up" disabled>+1</button>
+      <button id="count-reset" disabled>Reset</button>
+    </section>
+
+    <section>
+      <h2>Files</h2>
+      <p>Downloads the docs as a JSON file, through the bridge. The page never sees the API's URL or token.</p>
+      <button id="download-docs" disabled>Download docs.json</button>
+      <p id="download-status"></p>
+    </section>
+
+    <section>
+      <h2>Fallback data (baked in)</h2>
+      <p>Shown when the bridge is absent — for example when this page is opened on its own, outside the viewer. A Canvas page always renders something; live data is an upgrade, not a requirement.</p>
+      <p id="fallback">Demo docs: Audit Evidence Pack — Q3 (baked in).</p>
+    </section>
+  </main>
+
+  <script>
+    // Baked-in fallback data. The page renders this when there is no
+    // bridge. Live data replaces it when the bridge is present — the
+    // fallback is never removed, it is just not the thing shown.
+    var FALLBACK_DOCS = [
+      { id: 'doc_1', title: 'Audit Evidence Pack — Q3 (baked in)' },
+    ]
+
+    var statusEl = document.getElementById('bridge-status')
+    var loadBtn = document.getElementById('load-docs')
+    var docsEl = document.getElementById('docs')
+    var docsErr = document.getElementById('docs-error')
+    var countEl = document.getElementById('count')
+    var upBtn = document.getElementById('count-up')
+    var resetBtn = document.getElementById('count-reset')
+    var dlBtn = document.getElementById('download-docs')
+    var dlStatus = document.getElementById('download-status')
+
+    // The bridge is injected by the viewer at view time. It may not
+    // exist yet when this script runs (the bridge script is injected
+    // just before </body>, and this script runs after it — but a page
+    // opened outside the viewer never gets a bridge at all). Poll
+    // briefly, then settle: ready, or fallback.
+    function bridgeReady() {
+      return typeof window.canvas !== 'undefined' && window.canvas !== null
+    }
+    var tries = 0
+    var timer = setInterval(function () {
+      tries++
+      if (bridgeReady()) {
+        clearInterval(timer)
+        onBridgeReady()
+      } else if (tries >= 20) {
+        clearInterval(timer)
+        onBridgeAbsent()
+      }
+    }, 100)
+    if (bridgeReady()) { clearInterval(timer); onBridgeReady() }
+
+    function onBridgeReady() {
+      statusEl.textContent = 'Bridge: ready — live data available.'
+      loadBtn.disabled = false
+      upBtn.disabled = false
+      resetBtn.disabled = false
+      dlBtn.disabled = false
+      // Restore the saved counter, and keep it in sync if another view changes it.
+      window.canvas.state.get('count').then(function (v) {
+        countEl.textContent = v === null || v === undefined ? 0 : v
+      }).catch(function () {})
+      window.canvas.state.subscribe('count', function (v) {
+        countEl.textContent = v === null || v === undefined ? 0 : v
+      })
+    }
+
+    function onBridgeAbsent() {
+      statusEl.textContent = 'Bridge: not available — showing demo data.'
+      docsEl.textContent = 'Demo docs: ' + FALLBACK_DOCS.map(function (d) { return d.title }).join(', ')
+    }
+
+    loadBtn.addEventListener('click', function () {
+      loadBtn.disabled = true
+      docsErr.textContent = ''
+      // The literal window.canvas.api.fetch(...) matters: a shorter
+      // reference would be renamed by a minifier and the publish
+      // gate's allowlist would not recognise it. This page is not
+      // minified, but the rule is the same everywhere.
+      // api.fetch resolves with {status, data} — the API body is in `data`.
+      window.canvas.api.fetch('riskhub', '/v1/docs')
+        .then(function (res) {
+          var docs = res.data.documents
+          docsEl.textContent = 'Live docs: ' + docs.length + ' — ' + docs.map(function (d) { return d.title }).join(', ')
+        })
+        .catch(function (e) {
+          docsErr.textContent = 'Live docs failed: ' + e.message
+        })
+        .finally(function () { loadBtn.disabled = false })
+    })
+
+    upBtn.addEventListener('click', function () {
+      var next = Number(countEl.textContent) + 1
+      window.canvas.state.set('count', next)
+        .then(function () { countEl.textContent = next })
+        .catch(function (e) { docsErr.textContent = 'State write failed: ' + e.message })
+    })
+    resetBtn.addEventListener('click', function () {
+      window.canvas.state.set('count', 0)
+        .then(function () { countEl.textContent = 0 })
+        .catch(function (e) { docsErr.textContent = 'State write failed: ' + e.message })
+    })
+
+    dlBtn.addEventListener('click', function () {
+      dlStatus.textContent = 'Downloading…'
+      window.canvas.files.save({ api: 'riskhub', path: '/v1/docs', filename: 'docs.json' })
+        .then(function (r) { dlStatus.textContent = 'Saved ' + r.filename + ' (' + r.size + ' bytes).' })
+        .catch(function (e) { dlStatus.textContent = 'Download failed: ' + e.message })
+    })
+  </script>
+</body>
+</html>

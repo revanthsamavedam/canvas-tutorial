@@ -18,7 +18,7 @@ React is a way to describe a page as functions that return HTML, instead of writ
 - **Router** — the part that decides which page to show for a URL. This app uses `MemoryRouter` (see Step 3 — the choice matters).
 - **Bundle** — the build step. Vite reads your source (many files, imports, JSX, CSS) and produces one output file. `vite-plugin-singlefile` inlines everything — JavaScript and CSS — into a single `dist/index.html`. That is the whole point: a Canvas page is one self-contained file, so the bundle is the publishable artifact.
 
-TypeScript note: this tutorial is plain JavaScript (`.jsx`), not TypeScript, because the real prototype is. The ideas transfer directly — a component is a function, props are its parameters, state is a value you set. If you want types later, rename to `.tsx` and add them; nothing about the bridge changes.
+TypeScript note: this branch is the TypeScript translation of the plain-JavaScript tutorial on `master`: the same files, the same logic, only `.jsx` renamed to `.tsx` and types added. The ideas transfer directly — a component is a function, props are its parameters, state is a value you set; nothing about the bridge changes.
 
 ## Step 1 — The component library (`lib/`)
 
@@ -30,11 +30,11 @@ Start here, because it is the smallest piece and it is not React-specific.
 - `Card({ title, children })` — a `<section>` with an optional heading. `children` is whatever you put between the tags: `<Card title="X">…</Card>`.
 - `Stat({ label, value, icon })` — a number with a label and an icon.
 
-The app imports it by name (`import { Button, Card, Stat } from '@canvas-lib'`), and `vite.config.js` resolves the alias to `./lib` at build time. The library is bundled *into* the single file — it never ships separately and is never loaded from a CDN at view time. That is the rule: everything the page needs must be in the one file.
+The app imports it by name (`import { Button, Card, Stat } from '@canvas-lib'`), and `vite.config.ts` resolves the alias to `./lib` at build time. The library is bundled *into* the single file — it never ships separately and is never loaded from a CDN at view time. That is the rule: everything the page needs must be in the one file.
 
-**Check:** read `lib/Button.jsx` (10 lines). Change the button text in `src/pages/Home.jsx` from "Load live docs" to "Load live docs!" and rebuild (step 5) — the built file should contain the new text. Change it back.
+**Check:** read `lib/Button.tsx` (10 lines). Change the button text in `src/pages/Home.tsx` from "Load live docs" to "Load live docs!" and rebuild (step 5) — the built file should contain the new text. Change it back.
 
-## Step 2 — The hook (`src/useCanvas.js`)
+## Step 2 — The hook (`src/useCanvas.ts`)
 
 This is the React binding for the bridge, copied from the real prototype. Read it — it is ~90 lines and has two functions:
 
@@ -46,21 +46,21 @@ Two details that look odd and are both load-bearing:
 1. **It calls `window.canvas.api.fetch`, not `canvas.api.fetch`.** The minifier renames a local variable (`canvas` becomes `s`), and the publish gate's allowlist matches the literal `canvas.api.fetch` name. Writing the full path is the only way the gate can see the call in the built bundle.
 2. **It reads `res.data`, not `res`.** `api.fetch` resolves with `{status, data}` — the API body is in `data`.
 
-**Check:** in `src/pages/Home.jsx`, the "Load live docs" button calls `window.canvas.api.fetch('riskhub', '/v1/docs')` directly (not through `useCanvasApi`) so you can see the call in one place. Trace it: click → `loadLiveDocs` → `res.data.documents` → rendered as "Live docs: 2 — …".
+**Check:** in `src/pages/Home.tsx`, the "Load live docs" button calls `window.canvas.api.fetch('riskhub', '/v1/docs')` directly (not through `useCanvasApi`) so you can see the call in one place. Trace it: click → `loadLiveDocs` → `res.data.documents` → rendered as "Live docs: 2 — …".
 
 ## Step 3 — The router: MemoryRouter, not HashRouter
 
-`src/App.jsx` uses `MemoryRouter`. This is a real bug the prototype hit, so learn it here:
+`src/App.tsx` uses `MemoryRouter`. This is a real bug the prototype hit, so learn it here:
 
 - A srcDoc page's URL is `about:srcdoc`. There is no real URL to put a hash or a path on.
 - `HashRouter` reads `window.location` and calls `new URL(...)` against it (react-router's `encodeLocation`). On `about:srcdoc` that throws `Failed to construct 'URL': Invalid URL`, and the app never mounts.
 - `MemoryRouter` keeps the history in memory. `Link` navigation still works, the routes are the same (`/` and `/about`), and there is no URL to sync — which is correct, because a srcDoc iframe has no address bar.
 
-**Check:** change `MemoryRouter` to `HashRouter` in `src/App.jsx`, rebuild, load the bundle in the viewer. The iframe stays blank and the console shows the URL error. Change it back. (This is the fastest way to believe the rule.)
+**Check:** change `MemoryRouter` to `HashRouter` in `src/App.tsx`, rebuild, load the bundle in the viewer. The iframe stays blank and the console shows the URL error. Change it back. (This is the fastest way to believe the rule.)
 
 ## Step 4 — The pages (`src/pages/`)
 
-`Home.jsx` is the Part 03 sample page, rewritten as components. Compare them side by side — the logic is the same, only the shape changed:
+`Home.tsx` is the Part 03 sample page, rewritten as components. Compare them side by side — the logic is the same, only the shape changed:
 
 | Part 03 (plain HTML) | Part 04 (React) |
 |---|---|
@@ -70,7 +70,7 @@ Two details that look odd and are both load-bearing:
 | `FALLBACK_DOCS` constant | the same baked-in data, rendered when `ready` is false |
 | `state.set('count', …)` | the same call, inside a handler |
 
-`About.jsx` is a second route (`/about`) that proves routing works: a `Link` to it, a `Card` with text.
+`About.tsx` is a second route (`/about`) that proves routing works: a `Link` to it, a `Card` with text.
 
 **Check:** in the viewer, load the React bundle, click **About** in the nav, then **Home**. Both routes render. (With `MemoryRouter`, the URL never changes — the route is in-memory state, and that is fine.)
 
@@ -82,15 +82,16 @@ npm install
 npm run build
 ```
 
-You should see one file: `dist/index.html`, about 270 KB (~86 KB gzipped). Open it and confirm: exactly one file in `dist/`, one `<style>` tag, zero external `src`/`href`. Then check it against the publish gate's rules:
+You should see one file: `dist/index.html`, about 270 KB (~86 KB gzipped). Open it and confirm: exactly one file in `dist/`, one `<style>` tag, zero external `src`/`href`. Then typecheck the sources and check the bundle against the publish gate's rules:
 
 ```bash
+npm run typecheck
 npm run check
 ```
 
 `scripts/check-bundle.mjs` mirrors the real validator: no external resources, no secrets, no direct `fetch(`/`XMLHttpRequest`/`WebSocket` — except the Vite modulepreload helper (dead code, no `<link rel="modulepreload">` exists) and bridge calls (`window.canvas.api.fetch`, allowed by the gate's carve-out). It should report `failures: none`.
 
-**Check:** run `npm run build` and `npm run check`. Both must pass. If `check` reports a direct `fetch(`, the cause is usually a real `fetch(` in app or library code — remove the call; data goes through the bridge.
+**Check:** run `npm run build`, `npm run typecheck`, and `npm run check`. All three must pass. If `check` reports a direct `fetch(`, the cause is usually a real `fetch(` in app or library code — remove the call; data goes through the bridge.
 
 ## Step 6 — Load it in the viewer
 
@@ -112,5 +113,5 @@ You should see the app render, "Bridge: ready — live data available.", and **L
 
 ## Where the real code lives
 
-- `canvas-react-bundle/` prototype — `src/useCanvas.js`, `src/pages/Home.jsx`, `lib/`, `vite.config.js`. This part copies that shape.
+- `canvas-react-bundle/` prototype — `src/useCanvas.ts`, `src/pages/Home.tsx`, `lib/`, `vite.config.ts`. This part copies that shape.
 - `canvas-react-bundle-guide.md` — the full guide, including the E2E findings (MemoryRouter, the literal bridge call, `{status, data}`, src/srcDoc, versions by number, the registry field names).

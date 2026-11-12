@@ -31,6 +31,26 @@ python3 -m http.server 8000
 
 Node 20+ also works for the React part (`cd 04-react && npm install && npm run build`).
 
+## TypeScript branch
+
+This branch is a line-to-line TypeScript translation of the `master` branch:
+the same files, the same order, the same logic — only TypeScript syntax and
+type annotations are added. The tutorial sources are `.ts` / `.tsx`:
+
+- Parts 01–02: `01-bridge/bridge.ts`, `01-bridge/host.ts`,
+  `02-viewer/shell.ts`. They compile to `bridge.js`, `host.js`, `shell.js`
+  in the same directories (`npm install && npm run build` at the repo
+  root), and the HTML files load the compiled `.js` unchanged. Edit the
+  `.ts`, rebuild, reload. The compiled `.js` is checked in so the
+  tutorial still runs with no build step — double-clicking
+  `01-bridge/demo.html` works as on `master`.
+- Part 04: `src/*.tsx`, `lib/*.tsx`, `vite.config.ts`. Build and check are
+  unchanged (`cd 04-react && npm install && npm run build && npm run check`);
+  `npm run typecheck` runs `tsc --noEmit`.
+- Part 03 has no `.js` file of its own (its script is inline in
+  `index.html`), so it is unchanged. `prod-reference/` is a snapshot of
+  production JavaScript and is copied unchanged.
+
 ## Where this came from
 
 This is a teaching repo, not the production platform. The real code lives in:

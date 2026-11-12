@@ -1,0 +1,1 @@
+{"compilerOptions":{"declaration":false,"lib":["ES2020","DOM"],"module":"ESNext","rootDir":".","sourceMap":false,"strict":true,"target":"ES2020","types":[]},"include":["01-bridge/bridge.ts","01-bridge/host.ts","02-viewer/shell.ts"]}

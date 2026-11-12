@@ -2,7 +2,9 @@
 
 Build the viewer: the outer shell that shows a page, and the inner shell that locks it down.
 
-**You will build:** `shell.js` (CSP + lockdown + injection), `viewer.html` (outer shell, iframe, request handlers, stub registry), and `demo-shell.html` (what shows when no page is loaded). It reuses `host.js` from Part 01.
+**You will build:** `shell.ts` (CSP + lockdown + injection, compiled to `shell.js`), `viewer.html` (outer shell, iframe, request handlers, stub registry), and `demo-shell.html` (what shows when no page is loaded). It reuses `host.ts` from Part 01.
+
+The `.ts` file is the source of truth: edit it, then run `npm run build` at the repo root to regenerate the `shell.js` the viewer loads. The compiled `.js` is checked in, so the viewer still runs with no build step.
 
 **Time:** ~45 minutes. **Prerequisite:** Part 01.
 
@@ -12,9 +14,9 @@ Build the viewer: the outer shell that shows a page, and the inner shell that lo
 - **srcDoc** — an iframe attribute that sets the iframe's content from a string of HTML, instead of loading a URL. `iframe.srcdoc = '<html>…'` renders that HTML. The page's URL becomes `about:srcdoc`.
 - **Render copy** — the viewer never serves the stored page as-is. It makes a copy, injects the CSP meta + lockdown + bridge into the copy, and renders that. The stored version stays byte-identical.
 
-## Step 1 — The inner shell (`shell.js`)
+## Step 1 — The inner shell (`shell.ts`)
 
-Read `shell.js`. `withCanvasShell(html, bridgeSource)` does three injections, in this order:
+Read `shell.ts`. `withCanvasShell(html, bridgeSource)` does three injections, in this order:
 
 1. **CSP meta + lockdown into `<head>`** — before any page code runs.
 2. **Bridge client just before `</body>`** — after the page's own scripts. (A React app's module script is deferred, so it runs after the bridge anyway; `window.canvas` exists when the app mounts.) The bridge goes before the **last** `</body>`, not the first: a page's own script can contain the literal string `</body>` (the sample page has it in a comment), and a first-match replace injects the bridge in the middle of that script — the injected `</script>` closes the page's `<script>` early and the rest of the page's code renders as visible text. This repo's sample page is the regression test for that: it broke exactly this way while the tutorial was being built, and `lastIndexOf` fixed it. The real `agent-docs-ui` `withCanvasShell` still uses first-match — same latent bug.

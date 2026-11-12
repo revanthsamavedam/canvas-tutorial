@@ -2,7 +2,9 @@
 
 Build the bridge first, because everything else is just code that uses it.
 
-**You will build:** a page-side client (`bridge.js`, sets `window.canvas`) and a chrome-side host (`host.js`, answers requests). Then you will run them against each other in `demo.html`.
+**You will build:** a page-side client (`bridge.ts`, compiled to `bridge.js`, sets `window.canvas`) and a chrome-side host (`host.ts`, compiled to `host.js`, answers requests). Then you will run them against each other in `demo.html`.
+
+The `.ts` files are the source of truth: edit them, then run `npm run build` at the repo root to regenerate the `.js` the HTML files load. The compiled `.js` is checked in, so this part still runs with no build step.
 
 **Time:** ~45 minutes.
 
@@ -24,9 +26,9 @@ The only connection is `postMessage`.
 
 **Check:** open `demo.html` in a browser (double-click works — no server needed for this part). You should see the inner page say "Bridge: ready — live data available." and "Live docs: 2 — Audit Evidence Pack — Q3, Audit Evidence Pack — Q4".
 
-## Step 2 — The page-side client (`bridge.js`)
+## Step 2 — The page-side client (`bridge.ts`)
 
-Read `bridge.js` top to bottom. It is ~180 lines and has four moving parts:
+Read `bridge.ts` top to bottom. It is ~180 lines and has four moving parts:
 
 1. **The `ready` promise.** The page cannot send a request until the viewer has said hello (the `canvas-init` message, step 4). Requests made before that wait on `ready` — so page code never has to check "is the bridge here yet?" itself.
 2. **The `pending` map.** Every request gets a number (`nextId++`). The reply carries the same number, so the client knows which Promise to resolve. This is the same pattern as JSON-RPC, and it is why many requests can be in flight at once.
@@ -37,9 +39,9 @@ Note what the client does *not* do: it never calls `fetch`, never holds a token,
 
 **Check:** in `demo-page.html`, change the path to `'/v1/nope'` and reload. You should see the page report the error instead of data. Change it back.
 
-## Step 3 — The chrome-side host (`host.js`)
+## Step 3 — The chrome-side host (`host.ts`)
 
-Read `host.js`. `createBridgeHost(options)` returns `{startSession, handleMessage}`. The viewer supplies the pieces the host needs: `getFrame`, the registry (`apis`), `callRegisteredApi`, `canvasApiGet`, the `state` store, and the file functions. The host is the switchboard — it never invents data.
+Read `host.ts`. `createBridgeHost(options)` returns `{startSession, handleMessage}`. The viewer supplies the pieces the host needs: `getFrame`, the registry (`apis`), `callRegisteredApi`, `canvasApiGet`, the `state` store, and the file functions. The host is the switchboard — it never invents data.
 
 For every message, in order:
 
